@@ -1,0 +1,25 @@
+﻿# C++ compiled files
+*.exe
+*.out
+*.o
+*.obj
+*.a
+*.so
+*.dll
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build directories
+build/
+bin/
+obj/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
