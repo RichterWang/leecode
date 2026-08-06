@@ -10,6 +10,7 @@ This repository stores my LeetCode solutions and algorithm notes, organized by t
 - `by-topic/graph/`
 - `by-topic/hash-table/`
 - `by-topic/linked-list/`
+- `by-topic/math/`
 - `by-topic/stack-queue/`
 - `by-topic/string/`
 - `by-topic/tree/`
@@ -41,6 +42,10 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 - `3014-minimum-pushes-i`
 - `3016-minimum-pushes-ii`
 - `3020-find-the-maximum-number-of-elements-in-subset`
+
+### Math
+
+- `3345-smallest-divisible-digit-product-i`
 
 ### String
 
