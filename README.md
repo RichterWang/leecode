@@ -46,6 +46,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 ### Math
 
 - `3345-smallest-divisible-digit-product-i`
+- `3348-smallest-divisible-digit-product-ii`
 
 ### String
 
