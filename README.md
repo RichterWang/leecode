@@ -50,6 +50,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 
 ### String
 
+- `3302-find-the-lexicographically-smallest-valid-sequence`
 - `string-matching`
 
 ## Notes
