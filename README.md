@@ -35,6 +35,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 ### Dynamic Programming
 
 - `0486-predict-the-winner`
+- `1140-stone-game-ii`
 - `1406-stone-game-iii`
 
 ### Hash Table / Greedy
