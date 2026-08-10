@@ -37,6 +37,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 - `0486-predict-the-winner`
 - `1140-stone-game-ii`
 - `1406-stone-game-iii`
+- `1510-stone-game-iv`
 
 ### Hash Table / Greedy
 
