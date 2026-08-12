@@ -31,6 +31,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 ### Array
 
 - `0073-set-matrix-zeroes`
+- `2958-length-of-longest-subarray-with-at-most-k-frequency`
 - `2996-smallest-missing-integer-greater-than-sequential-prefix-sum`
 
 ### Dynamic Programming
