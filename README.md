@@ -6,6 +6,7 @@ This repository stores my LeetCode solutions and algorithm notes, organized by t
 
 - `by-topic/array/`
 - `by-topic/binary-search/`
+- `by-topic/bit-manipulation/`
 - `by-topic/dynamic-programming/`
 - `by-topic/graph/`
 - `by-topic/hash-table/`
@@ -34,6 +35,10 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 - `2958-length-of-longest-subarray-with-at-most-k-frequency`
 - `2996-smallest-missing-integer-greater-than-sequential-prefix-sum`
 
+### Bit Manipulation
+
+- `3702-longest-subsequence-with-non-zero-xor`
+
 ### Dynamic Programming
 
 - `0486-predict-the-winner`
@@ -54,6 +59,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 
 ### String
 
+- `2213-longest-substring-of-one-repeating-character`
 - `3302-find-the-lexicographically-smallest-valid-sequence`
 - `string-matching`
 
