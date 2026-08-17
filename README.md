@@ -47,6 +47,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 - `1510-stone-game-iv`
 - `1563-stone-game-v`
 - `2029-stone-game-ix`
+- `DP-GUIDE.md`
 
 ### Hash Table / Greedy
 
@@ -68,4 +69,5 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 ## Notes
 
 - Some topics include multiple approaches for the same problem when the tradeoff is useful, such as recursion + memoization and interval DP.
+- The `by-topic/dynamic-programming/DP-GUIDE.md` note summarizes a practical workflow for recognizing and structuring DP problems.
 - The repository also keeps a generic markdown template at `solutions/TEMPLATE.md` for adding new problems.
