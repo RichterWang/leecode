@@ -45,6 +45,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 - `1140-stone-game-ii`
 - `1406-stone-game-iii`
 - `1510-stone-game-iv`
+- `1563-stone-game-v`
 - `2029-stone-game-ix`
 
 ### Hash Table / Greedy
