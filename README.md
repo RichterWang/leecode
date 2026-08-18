@@ -34,6 +34,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 - `0073-set-matrix-zeroes`
 - `2958-length-of-longest-subarray-with-at-most-k-frequency`
 - `2996-smallest-missing-integer-greater-than-sequential-prefix-sum`
+- `3471-find-the-largest-almost-missing-integer`
 
 ### Bit Manipulation
 
