@@ -12,7 +12,7 @@
 using namespace std;
 
 /*
- * Daily question draft
+ * Optimized solution using hash map
  *
  * 使用方式：
  * 1. 先根据题目改函数名、参数列表和返回值类型

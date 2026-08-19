@@ -52,6 +52,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 
 ### Hash Table / Greedy
 
+- `1386-cinema-seat-allocation`
 - `3014-minimum-pushes-i`
 - `3016-minimum-pushes-ii`
 - `3020-find-the-maximum-number-of-elements-in-subset`
