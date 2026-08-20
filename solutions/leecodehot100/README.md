@@ -161,3 +161,88 @@ else j--;
 ### 代码
 
 - `leecode240.cpp`
+
+## 141. Linked List Cycle
+
+- **题目链接**：https://leetcode.com/problems/linked-list-cycle/
+- **核心思路**：快慢指针（Floyd's Cycle Detection Algorithm），如果链表有环，快指针最终会追上慢指针。
+
+### 算法思想
+
+设置两个指针：
+- `slow`（慢指针）：每次移动 1 步
+- `fast`（快指针）：每次移动 2 步
+
+如果链表有环，两个指针都会进入环中，且快指针与慢指针的距离每次缩小 1，最终一定会相遇。
+
+如果链表无环，快指针会先到达链表尾部（`nullptr`）。
+
+### 关键细节
+
+#### 1. 判断相遇
+
+用**指针地址**判断，而不是节点的值：
+
+```cpp
+if (slow == fast)  // 正确：比较指针地址
+```
+
+❌ 错误写法：
+```cpp
+if (slow->val == fast->val)  // 错误：值相同不代表是同一个节点
+```
+
+#### 2. 边界检查
+
+必须在访问指针成员之前检查指针是否为空：
+
+```cpp
+if (head == nullptr || head->next == nullptr) {
+    return false;  // 空链表或单节点链表无环
+}
+```
+
+#### 3. 循环条件
+
+在移动 `fast` 指针（`fast->next->next`）之前，必须确保：
+- `fast != nullptr`（fast 本身存在）
+- `fast->next != nullptr`（fast 的下一个节点存在）
+
+```cpp
+while (fast->next != nullptr && fast->next->next != nullptr)
+```
+
+这样可以避免空指针解引用错误。
+
+### 链表操作基础
+
+#### 移动到下一个节点
+
+```cpp
+slow = slow->next;           // 慢指针移动 1 步
+fast = fast->next->next;     // 快指针移动 2 步
+```
+
+#### 尾节点判断
+
+链表的尾节点是最后一个实际存在的节点，它的 `next` 指向 `nullptr`：
+
+```
+节点1 → 节点2 → 节点3 → nullptr
+                 ↑        ↑
+               尾节点    不是节点
+```
+
+判断到达尾部：
+```cpp
+if (node->next == nullptr)  // node 是尾节点
+```
+
+### 复杂度
+
+- **时间复杂度**：`O(n)`，每个节点最多被访问常数次
+- **空间复杂度**：`O(1)`，只使用两个指针
+
+### 代码
+
+- `leecode141.cpp`
