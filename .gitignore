@@ -23,3 +23,6 @@ obj/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# special file
+soultions/everydayquestion.cpp
