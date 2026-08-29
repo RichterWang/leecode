@@ -1,24 +1,9 @@
 #include <algorithm>
-#include <iostream>
-#include <queue>
-#include <stack>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
 #include <vector>
-#include <cmath>
 
 using namespace std;
 
-/*
- * Daily question draft
- *
- * 使用方式：
- * 1. 先根据题目改函数名、参数列表和返回值类型
- * 2. 在 Solution 中补核心算法
- * 3. 提交到 LeetCode 时，通常只需要复制 Solution 类
- */
 class Solution {
 public:
     string lexPalindromicPermutation(string s, string target) {
@@ -49,6 +34,7 @@ public:
         // 找到前半段差的数量
         for(int i = 0; i < half; i++) difference[targetHalf[i] - 'a']--;
 
+        // 情况 A：前半段与 targetHalf 完全一致，差异落在中间字符或后半段
         if(*min_element(difference.begin(), difference.end()) >= 0)
         {
             string candidate = targetHalf;
@@ -57,6 +43,7 @@ public:
             if(candidate > target) return candidate;
         }
 
+        // 情况 B：从右往左找第一个能放更大字符的位置
         for(int i = half - 1; i >= 0; i--)
         {
             int b = targetHalf[i] - 'a';
@@ -88,50 +75,10 @@ public:
     }
 
 private:
-
-string getMinString(const vector<int>& array)
-{
-    string result;
-    for(int i = 0; i < 26; i++) result.append(array[i], 'a' + i);
-    return result;
-}
-
+    string getMinString(const vector<int>& array)
+    {
+        string result;
+        for(int i = 0; i < 26; i++) result.append(array[i], 'a' + i);
+        return result;
+    }
 };
-
-    // string lexGreaterPermutation(string s, string target) {
-    //     vector<int> cnt(26);
-    //     for (int i = 0; i < s.size(); i++) {
-    //         cnt[s[i] - 'a']++;
-    //         cnt[target[i] - 'a']--;
-    //     }
-
-    //     // 从右往左尝试
-    //     for (int i = s.size() - 1; i >= 0; i--) {
-    //         int b = target[i] - 'a';
-    //         cnt[b]++; // 撤销消耗
-    //          // 检查前缀能否完全匹配
-    //         if (*min_element(cnt.begin(), cnt.end()) < 0) {
-    //             continue;
-    //         }
-    //         // 找一个比 b 大的最小可用字符
-    //         for (int j = b + 1; j < 26; j++) {
-    //             if (cnt[j]) {
-    //                 cnt[j]--;
-    //                 target[i] = 'a' + j;
-    //                 target.resize(i + 1);
-    //                 return target + getMinString(cnt);
-    //             }
-    //         }
-    //     }
-
-    //     return "";
-    // }
-
-    // // 获取最小字典序字符串（升序排列）
-    // string getMinString(const vector<int>& cnt) {
-    //     string res;
-    //     for (int i = 0; i < 26; i++) {
-    //         res.append(cnt[i], 'a' + i);
-    //     }
-    //     return res;
-    // }
