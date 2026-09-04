@@ -330,3 +330,128 @@ void dfs(int i) {
 ### 代码
 
 - `leecode78.cpp`
+
+## 17. Letter Combinations of a Phone Number
+
+- **题目链接**：https://leetcode.com/problems/letter-combinations-of-a-phone-number/
+- **核心思路**：回溯。递归深度等于 `digits.size()`，每层枚举当前数字对应的所有字母。
+
+### 为什么必须用递归
+
+如果 `digits = "23"`，两层嵌套循环就够了：
+
+```cpp
+for (char a : "abc")
+    for (char b : "def")
+        answer.push_back(string{a, b});
+```
+
+但 `"234"` 要三层，`"2345"` 要四层。**层数由运行时的输入长度决定，没法写成固定层数的嵌套循环。** 递归正是用来模拟这种"层数可变的嵌套循环"：递归一层等价于多写一层 `for`。
+
+这也解释了为什么单层 `for (int i = 0; i < n; i++)` 走不通。单层循环只能携带一份状态线性往下走，而第 `i` 位有 3~4 个分支，每个分支都要各自继续展开成完整字符串。一个 `temp` 装不下"同时存在多条待续路径"的结构。
+
+### 做法
+
+1. 建立数字到字母的映射表。
+2. 用 `idx` 标记当前处理 `digits` 的第几位，`temp` 保存当前已选的字母。
+3. 递归出口：`idx == n` 时 `temp` 已凑满 `n` 个字母，收进结果并返回。
+4. 否则取出 `digits[idx]` 对应的字母串，逐个尝试：追加到 `temp` → 递归下一位 → 从 `temp` 弹出。
+
+```cpp
+function<void(int)> backtrack = [&](int idx) {
+    if (idx == n) { answer.push_back(temp); return; }
+    for (char c : reference[digits[idx]]) {
+        temp.push_back(c);      // 做选择
+        backtrack(idx + 1);     // 递归下一位
+        temp.pop_back();        // 撤销选择
+    }
+};
+```
+
+### pop_back 为什么不能省
+
+`temp` 只有一份，被所有分支**共享复用**。递归返回时 `temp` 里还留着刚才那条路径的字母，不弹掉的话下一个分支就会接在错误的前缀后面。
+
+`pop_back()` 的职责是把 `temp` 恢复成"进入本层循环时的状态"，保证每次迭代起点一致。"回溯"这个名字就来自这个撤销动作。
+
+`digits = "23"` 的 `temp` 变化（缩进表示递归深度）：
+
+```text
+backtrack(0), temp=""
+  c='a' → temp="a"
+    backtrack(1)
+      c='d' → temp="ad" → 收集 "ad" → pop → temp="a"
+      c='e' → temp="ae" → 收集 "ae" → pop → temp="a"
+      c='f' → temp="af" → 收集 "af" → pop → temp="a"
+  pop → temp=""
+  c='b' → temp="b" → ... 收集 "bd" "be" "bf"
+  pop → temp=""
+  c='c' → temp="c" → ... 收集 "cd" "ce" "cf"
+```
+
+每次内层递归返回后 `temp` 都被还原成 `"a"`，靠的就是 `pop_back()`。
+
+### 替代写法：按值传参
+
+不共享状态就不需要撤销：
+
+```cpp
+function<void(int, string)> backtrack = [&](int idx, string cur) {
+    if (idx == n) { answer.push_back(cur); return; }
+    for (char c : reference[digits[idx]]) {
+        backtrack(idx + 1, cur + c);   // 每层拿到独立副本
+    }
+};
+```
+
+写起来更省心，代价是每次递归都拷贝一份字符串。本题字符串短，差别不大。但"共享 + 撤销"是更通用的模式，子集、排列、组合、N 皇后都是这个套路，值得优先写熟。
+
+### 替代写法：迭代按层展开
+
+把状态从"一个 `temp`"换成"一个结果集"，每处理一位就把已有结果全部扩展一轮：
+
+```cpp
+vector<string> answer{""};                 // 注意初始是一个空串
+for (int i = 0; i < n; i++) {
+    const string& letters = reference[digits[i]];
+    vector<string> next;
+    for (const string& prefix : answer)
+        for (char c : letters)
+            next.push_back(prefix + c);
+    answer = move(next);
+}
+```
+
+`answer` 规模随层递增：`1 → 3 → 9`（对应 `"23"`）。这是 BFS 式展开，不用递归。
+
+易错点：`answer` 必须初始化成 `{""}` 而不是 `{}`，否则第一轮内层循环一次都不执行，结果恒为空。
+
+两种写法同量级，但空间不同：回溯是 `O(n)`（只存一条路径 + 递归栈），迭代是 `O(4^n)`（要同时存住整层）。
+
+### 常见错误
+
+**空串输入。** `digits` 为空时应返回空数组 `{}`，而不是含一个空串的 `{""}`。如果不提前特判，`backtrack(0)` 会立刻命中 `idx == n` 把空串收进结果。
+
+**忘记 return。** 声明了返回值却走到函数末尾是未定义行为，加 `-Wall` 能当场发现。
+
+### 优化空间
+
+映射表用 `static` 或直接数组索引可以省掉每次调用的构造开销：
+
+```cpp
+static const string mp[10] = {"", "", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz"};
+// 取用：mp[digits[idx] - '0']
+```
+
+题目保证只含 2-9，不用担心越界。本题数据量小，`unordered_map` 完全够用。
+
+### 复杂度
+
+设 `n = digits.size()`，每位最多 4 个字母：
+
+- **时间复杂度**：`O(4^n × n)`。结果最多 `4^n` 个，每个长度 `n`，构造和拷贝都要 `O(n)`
+- **空间复杂度**：额外 `O(n)`（`temp` + 递归栈），不计输出
+
+### 代码
+
+- `leecode17.cpp`
