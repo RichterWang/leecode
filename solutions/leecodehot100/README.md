@@ -855,3 +855,217 @@ A(0,0)
 ### 代码
 
 - `leecode79.cpp`
+
+## 131. Palindrome Partitioning
+
+- **中文名称**：分割回文串
+- **题目链接**：https://leetcode.com/problems/palindrome-partitioning/
+- **核心思路**：DFS + 回溯。把字符串的每个位置视为新的分割起点，枚举从该位置开始的所有回文前缀，再递归处理剩余后缀。
+
+### DFS 状态
+
+递归函数：
+
+```cpp
+dfs(current_index, temp, s, answer)
+```
+
+表示：
+
+> 下标 `[0, current_index - 1]` 的内容已经完成分割，`temp` 保存当前分割方案；接下来枚举从 `current_index` 开始的下一段回文子串。
+
+例如：
+
+```text
+s = "aab"
+current_index = 2
+temp = ["aa"]
+```
+
+表示前两个字符已经被分成 `"aa"`，接下来只需要分割从下标 `2` 开始的 `"b"`。
+
+### 枚举当前子串的结束位置
+
+固定起点 `current_index` 后，枚举结束位置 `i`：
+
+```cpp
+for (int i = current_index;
+     i < static_cast<int>(s.size());
+     ++i)
+```
+
+当前候选子串是闭区间：
+
+```text
+s[current_index...i]
+```
+
+对应的 C++ 提取方式为：
+
+```cpp
+s.substr(current_index, i - current_index + 1)
+```
+
+`substr` 的第二个参数是长度，因此需要加 `1`。
+
+只有候选子串是回文串时，才继续搜索：
+
+```cpp
+if (!isPalindrome(s, current_index, i)) {
+    continue;
+}
+```
+
+这是本题的核心剪枝，因为题目要求分割出的每一段都必须是回文串。
+
+### 递归与回溯
+
+找到回文子串后，执行：
+
+```cpp
+temp.push_back(
+    s.substr(current_index, i - current_index + 1)
+);
+dfs(i + 1, temp, s, answer);
+temp.pop_back();
+```
+
+三个步骤分别表示：
+
+1. `push_back`：将当前回文子串加入分割方案；
+2. `dfs(i + 1, ...)`：当前区间已经处理到 `i`，所以下一段从 `i + 1` 开始；
+3. `pop_back`：撤销当前选择，继续尝试当前层的其他结束位置。
+
+下一层必须传入 `i + 1`，而不是 `current_index + 1`。因为本次选择的是整个区间 `[current_index, i]`，这段区间都已经处理完毕。
+
+### 终止条件
+
+当起点到达字符串末尾之后：
+
+```cpp
+if (current_index == static_cast<int>(s.size())) {
+    answer.push_back(temp);
+    return;
+}
+```
+
+说明整个字符串已经被若干个回文子串恰好覆盖，当前 `temp` 是一种完整分割方案。
+
+终止条件是：
+
+```cpp
+current_index == s.size()
+```
+
+而不是：
+
+```cpp
+current_index == s.size() - 1
+```
+
+例如选择最后一个字符后，下一层收到的下标正好等于字符串长度。
+
+### 回文判断
+
+使用双指针检查闭区间 `[begin, end]`：
+
+```cpp
+bool isPalindrome(const string& s, int begin, int end) {
+    while (begin < end) {
+        if (s[begin] != s[end]) {
+            return false;
+        }
+
+        ++begin;
+        --end;
+    }
+
+    return true;
+}
+```
+
+两端字符不同即可立即返回 `false`；否则指针向中间收缩。单字符和空心区间会自然判定为回文。
+
+### `temp` 按值传递的特点
+
+当前代码将路径参数声明为：
+
+```cpp
+vector<string> temp
+```
+
+因此每次调用 `dfs` 都会获得一份独立的路径副本。子递归对 `temp` 的修改不会影响父递归。
+
+不过当前层循环中的不同迭代仍然共享当前函数内部的这一份 `temp`，所以递归返回后仍需执行：
+
+```cpp
+temp.pop_back();
+```
+
+否则本轮加入的子串会残留到同一层的下一个候选分支中。
+
+例如在根节点先选择 `"a"` 后，如果不弹出它，再尝试 `"aa"` 时，路径会错误地变成：
+
+```text
+["a", "aa"]
+```
+
+而不是：
+
+```text
+["aa"]
+```
+
+更常见的写法是将 `temp` 按引用传递：
+
+```cpp
+vector<string>& temp
+```
+
+这样可以避免每层递归复制整个路径，但同样必须使用 `push_back` 和 `pop_back` 维护共享状态。当前按值版本逻辑正确，优点是子递归状态彼此隔离，代价是额外的路径复制。
+
+### `"aab"` 搜索过程
+
+```text
+dfs(0), temp=[]
+├─ 选择 "a"
+│  └─ dfs(1), temp=["a"]
+│     ├─ 选择 "a"
+│     │  └─ dfs(2), temp=["a","a"]
+│     │     └─ 选择 "b"
+│     │        └─ dfs(3)，收集 ["a","a","b"]
+│     └─ "ab" 不是回文，跳过
+├─ 选择 "aa"
+│  └─ dfs(2), temp=["aa"]
+│     └─ 选择 "b"
+│        └─ dfs(3)，收集 ["aa","b"]
+└─ "aab" 不是回文，跳过
+```
+
+最终结果：
+
+```text
+[["a", "a", "b"], ["aa", "b"]]
+```
+
+### 为什么不需要访问数组
+
+本题每次递归都会使下标严格向右移动：
+
+```cpp
+current_index = i + 1
+```
+
+搜索不可能回到已经处理过的字符，因此不存在环，也不会重复使用之前的字符，不需要像 LeetCode 79 单词搜索那样维护 `visited`。
+
+### 复杂度
+
+设字符串长度为 `n`：
+
+- **时间复杂度**：最坏为 `O(n × 2^n)`。字符串的 `n - 1` 个间隙都有切或不切两种可能；检查回文、构造子串和复制完整方案均可能需要线性时间。
+- **额外空间复杂度**：当前按值传递路径的实现最坏可占 `O(n²)`，递归链上的每一层都可能保留一份总长度为 `O(n)` 的路径副本；不计输出结果。若将路径改为引用传递，额外空间可降至 `O(n)` 量级。
+- **输出空间**：最坏为 `O(n × 2^n)`。
+
+### 代码
+
+- `leecode131.cpp`
