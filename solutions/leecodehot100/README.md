@@ -856,6 +856,206 @@ A(0,0)
 
 - `leecode79.cpp`
 
+## 35. Search Insert Position
+
+- **中文名称**：搜索插入位置
+- **题目链接**：https://leetcode.com/problems/search-insert-position/
+- **核心思路**：二分查找。找到第一个 ≥ target 的位置。
+
+### 问题本质
+
+给定有序数组和目标值，找到目标值的位置；如果不存在，返回它应该插入的位置。
+
+换句话说：**找到第一个 ≥ target 的位置**。
+
+### 标准解法：左闭右开二分模板
+
+最简洁的写法是使用左闭右开区间 `[left, right)`：
+
+```cpp
+int searchInsert(vector<int>& nums, int target) {
+    int left = 0, right = nums.size();  // 注意：right = n，不是 n-1
+    
+    while(left < right) {
+        int mid = left + (right - left) / 2;
+        if(nums[mid] < target) {
+            left = mid + 1;  // [mid+1, right)
+        } else {
+            right = mid;     // [left, mid)
+        }
+    }
+    
+    return left;  // 循环结束时 left == right
+}
+```
+
+**核心思想：循环不变量**
+
+维护区间 `[left, right)` 的语义：
+- `[0, left)` 中的元素都 **< target**
+- `[right, n)` 中的元素都 **≥ target**
+- 要找的答案在 `[left, right)` 中
+
+**循环过程：**
+1. `nums[mid] < target` → mid 位置不符合要求，答案在右半部分 `[mid+1, right)`
+2. `nums[mid] >= target` → mid 位置可能是答案，答案在 `[left, mid]`，但由于是左闭右开区间，写成 `[left, mid)`
+
+**循环结束：** `left == right`，此时 `[left, right)` 为空，left 就是答案。
+
+### 为什么这个模板不需要特判 n=1, n=2？
+
+- `n=1` 时，初始 `left=0, right=1`，循环一次就能找到答案
+- `n=2` 时，初始 `left=0, right=2`，最多循环两次
+- 统一的逻辑自然覆盖了所有情况
+
+### 另一种写法：全闭区间模板
+
+如果更习惯闭区间 `[left, right]`：
+
+```cpp
+int searchInsert(vector<int>& nums, int target) {
+    int left = 0, right = nums.size() - 1;  // 闭区间
+    
+    while(left <= right) {  // 注意：是 <=
+        int mid = left + (right - left) / 2;
+        if(nums[mid] == target) {
+            return mid;
+        } else if(nums[mid] < target) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    
+    return left;  // 没找到时，left 就是插入位置
+}
+```
+
+这种写法稍微长一点，但也很清晰。
+
+### 常见错误：`while(left < right - 1)`
+
+使用 `while(left < right - 1)` 会导致循环结束时 `left` 和 `right` 之间还有一个元素没有确定：
+
+```cpp
+// 错误示范
+while(left < right - 1) {
+    // ...
+}
+return left + 1;  // 需要修正
+```
+
+这种写法需要：
+1. 额外特判 `n=1`, `n=2` 的情况
+2. 在循环结束后修正返回值
+3. 代码变得冗长且容易出错
+
+标准的 `while(left < right)` 保证循环结束时 `left == right`，不需要任何修正。
+
+### 二分查找关键点总结
+
+1. **选择合适的区间定义**（左闭右开 or 全闭）
+2. **维护循环不变量**
+3. **统一处理，避免特判**
+
+避免过度的边界判断和特殊情况处理，使用标准模板可以让代码更简洁、更不容易出错。
+
+### 复杂度
+
+- **时间复杂度**：`O(log n)`
+- **空间复杂度**：`O(1)`
+
+### 代码
+
+- `leecode35.cpp`：包含了使用 `while(left < right - 1)` 并需要特判 n=1, n=2 的实现
+
+### 推荐阅读
+
+掌握二分查找的标准模板后，可以统一处理各种变体：
+- 找第一个 ≥ x 的位置
+- 找最后一个 ≤ x 的位置
+- 找第一个 > x 的位置
+- 找最后一个 < x 的位置
+
+## 35. Search Insert Position
+
+- **中文名称**：搜索插入位置
+- **题目链接**：https://leetcode.com/problems/search-insert-position/
+- **核心思路**：二分查找左边界，返回第一个 >= target 的位置。
+
+### 标准模板（推荐）
+
+使用左闭右开区间 `[left, right)` 的二分查找：
+
+```cpp
+int left = 0, right = n;
+while (left < right) {
+    int mid = (left + right) / 2;
+    if (nums[mid] < target) left = mid + 1;
+    else right = mid;
+}
+return left;
+```
+
+#### 为什么这是标准写法
+
+1. **逻辑统一**：无需针对数组长度 1、2 或边界值做特判，所有情况用同一套逻辑处理
+2. **不会死循环**：`left = mid + 1` 保证左边界严格右移，`right = mid` 配合 `left < right` 保证收敛
+3. **语义清晰**：返回的 `left` 就是"第一个 >= target 的位置"，与 C++ `std::lower_bound` 语义一致
+
+#### 区间不变量
+
+循环维护的不变量是：
+
+```text
+nums[0...left) < target
+nums[right...n) >= target
+```
+
+循环结束时 `left == right`，此时 `left` 就是第一个 >= target 的位置。
+
+### 另一种写法（不推荐）
+
+使用 `while (left < right - 1)` 并在循环中多次提前判断相等：
+
+```cpp
+while (left < right - 1) {
+    if (target == nums[left]) return left;
+    if (target == nums[right]) return right;
+    if (nums[current] == target) return current;
+    // ...
+}
+return left + 1;
+```
+
+这种写法需要：
+- 多个边界特判（`n==1`、`n==2`、首尾越界）
+- 循环内重复检查相等
+- 最后返回 `left + 1` 而不是 `left`
+
+**缺点**：代码冗长、容易出错、不够通用。
+
+### 模板适用范围
+
+这个左边界模板可以直接套用到以下场景：
+
+- **LeetCode 35**：搜索插入位置
+- **LeetCode 34**：查找第一个和最后一个位置
+- **LeetCode 69**：x 的平方根（第一个平方 <= x 的数）
+- **LeetCode 278**：第一个错误的版本
+- **LeetCode 875**：爱吃香蕉的珂珂（最小速度）
+
+只需要根据题意调整判断条件，区间定义和更新规则保持不变。
+
+### 复杂度
+
+- **时间复杂度**：`O(log n)`
+- **空间复杂度**：`O(1)`
+
+### 代码
+
+- `leecode35.cpp`：标准二分查找模板
+
 ## 131. Palindrome Partitioning
 
 - **中文名称**：分割回文串
