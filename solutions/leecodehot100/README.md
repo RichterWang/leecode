@@ -1056,6 +1056,292 @@ return left + 1;
 
 - `leecode35.cpp`：标准二分查找模板
 
+## 51. N-Queens
+
+- **中文名称**：N 皇后问题
+- **题目链接**：https://leetcode.com/problems/n-queens/
+- **核心思路**：逐行放置皇后，使用三个集合分别记录已占用的列、主对角线、副对角线，回溯搜索所有合法方案。
+
+### 问题定义
+
+在 n×n 的棋盘上放置 n 个皇后，使得任意两个皇后都不能相互攻击。
+
+皇后的攻击范围：
+- 同一行
+- 同一列
+- 同一斜线（主对角线和副对角线）
+
+### 回溯策略
+
+#### 搜索顺序：逐行放置
+
+每行恰好放置一个皇后，从第 0 行开始，逐行向下搜索。
+
+```cpp
+function<void(int)> backtrace = [&](int row) {
+    if (row == n) {
+        answer.push_back(board);  // 所有行都放置完成
+        return;
+    }
+    
+    for (int col = 0; col < n; col++) {
+        // 尝试在 (row, col) 放置皇后
+    }
+};
+```
+
+**为什么逐行放置？**
+- 保证每行恰好一个皇后，无需检查行冲突
+- 搜索空间从 `C(n², n)` 降到 `n^n`
+- 递归结构清晰：第 `row` 行只需关心前 `row-1` 行的约束
+
+#### 冲突检查：三个方向
+
+使用三个集合分别记录已占用的：
+
+```cpp
+unordered_set<int> cols;    // 列
+unordered_set<int> diag1;   // 主对角线
+unordered_set<int> diag2;   // 副对角线
+```
+
+**列冲突**：同一列只能有一个皇后
+```cpp
+if (cols.count(col)) continue;
+```
+
+**主对角线冲突**（左上到右下 ↘）：
+```text
+(0,0) (0,1) (0,2)
+(1,0) (1,1) (1,2)
+(2,0) (2,1) (2,2)
+
+row - col 的值：
+  0    -1    -2
+  1     0    -1
+  2     1     0
+```
+
+同一主对角线上的格子 `row - col` 值相同：
+
+```cpp
+int d1 = row - col;
+if (diag1.count(d1)) continue;
+```
+
+**副对角线冲突**（右上到左下 ↙）：
+```text
+row + col 的值：
+  0     1     2
+  1     2     3
+  2     3     4
+```
+
+同一副对角线上的格子 `row + col` 值相同：
+
+```cpp
+int d2 = row + col;
+if (diag2.count(d2)) continue;
+```
+
+#### 回溯三部曲
+
+```cpp
+// 1. 做选择
+board[row][col] = 'Q';
+cols.insert(col);
+diag1.insert(d1);
+diag2.insert(d2);
+
+// 2. 递归下一行
+backtrace(row + 1);
+
+// 3. 撤销选择
+board[row][col] = '.';
+cols.erase(col);
+diag1.erase(d1);
+diag2.erase(d2);
+```
+
+**为什么需要撤销？**
+
+三个集合和 `board` 被所有分支共享复用。撤销操作将状态恢复到"进入本次循环迭代前"的状态，保证每个 `col` 迭代的起点一致。
+
+例如 `n=4`，第 0 行尝试 `col=0` 后：
+- 如果不撤销，`cols` 会残留 `{0}`
+- 尝试 `col=1` 时会错误地认为 `col=0` 仍被占用
+- 导致后续分支无法使用第 0 列
+
+### 对角线标识的数学性质
+
+**主对角线 `row - col`：**
+- 范围：`[-(n-1), n-1]`
+- 共 `2n - 1` 条主对角线
+- 沿对角线移动时，行列同时 +1 或 -1，差值不变
+
+**副对角线 `row + col`：**
+- 范围：`[0, 2(n-1)]`
+- 共 `2n - 1` 条副对角线
+- 沿对角线移动时，行 +1 列 -1（或反之），和值不变
+
+### 为什么不需要检查行冲突
+
+搜索顺序保证了：
+- 第 `row` 行放置时，前 `row-1` 行已经各放置了一个皇后
+- 第 `row` 行只会放置一个皇后（循环中 `continue` 或递归后立即返回）
+- 第 `row+1` 及之后的行尚未放置
+
+因此同一行不可能出现两个皇后。
+
+### 示例：n=4
+
+一个合法解：
+
+```text
+. Q . .    第 0 行，col=1
+. . . Q    第 1 行，col=3
+Q . . .    第 2 行，col=0
+. . Q .    第 3 行，col=2
+```
+
+对应的占用状态：
+- `cols = {1, 3, 0, 2}`
+- `diag1 = {-1, -2, 2, 1}`（分别对应 0-1, 1-3, 2-0, 3-2）
+- `diag2 = {1, 4, 2, 5}`（分别对应 0+1, 1+3, 2+0, 3+2）
+
+### 复杂度
+
+设棋盘大小为 `n × n`：
+
+- **时间复杂度**：`O(n!)`
+  - 第 0 行有 n 种选择
+  - 第 1 行最多 n-2 种（排除同列和两条对角线）
+  - 实际复杂度介于 `O(n!)` 和 `O(n^n)` 之间，更接近 `O(n!)`
+- **空间复杂度**：`O(n)`
+  - 递归栈：`O(n)`
+  - 三个集合：`O(n)`
+  - 棋盘：`O(n²)`，但属于输出的一部分
+
+### 代码
+
+- `leecode51.cpp`
+
+## 74. Search a 2D Matrix
+
+- **中文名称**：搜索二维矩阵
+- **题目链接**：https://leetcode.com/problems/search-a-2d-matrix/
+- **核心思路**：双层二分查找。第一层找到可能包含 target 的候选行，第二层在该行中查找 target。
+
+### 问题特点
+
+矩阵满足两个性质：
+1. 每行中的整数从左到右按非严格递增顺序排列
+2. 每行的第一个整数大于前一行的最后一个整数
+
+这意味着整个矩阵可以看作一个展开的有序数组。
+
+### 双层二分策略
+
+#### 第一层：找候选行
+
+目标是找到**最后一个首元素 < target 的行**。
+
+使用左闭右开区间 `[up, low)` 进行二分：
+
+```cpp
+int up = 0, low = row;
+int targetRow = -1;
+
+while(up != low) {
+    int mid = (up + low) / 2;
+    if(matrix[mid][0] == target) return true;  // 提前找到
+    
+    if(matrix[mid][0] < target) {
+        targetRow = mid;     // 记录候选行
+        up = mid + 1;        // 搜索更下面的行
+    } else {
+        low = mid;           // target 在更上面
+    }
+}
+
+if(targetRow == -1) return false;  // target 比所有行首都小
+```
+
+**关键点**：
+- 使用 `targetRow` 变量单独记录候选行，而不是依赖循环结束后的 `up` 或 `low`
+- 如果 `matrix[mid][0] < target`，说明 target 可能在 mid 行或更下面的行
+- 记录 `targetRow = mid` 后，继续搜索 `[mid+1, low)` 看是否有更合适的行
+
+#### 第二层：在候选行中查找
+
+在确定的 `targetRow` 行中，使用标准二分查找：
+
+```cpp
+int left = 0, right = col;
+
+while(left != right) {
+    int current = (left + right) / 2;
+    if(matrix[targetRow][current] == target) return true;
+    
+    if(matrix[targetRow][current] > target) {
+        right = current;      // target 在左半部分
+    } else {
+        left = current + 1;   // target 在右半部分
+    }
+}
+
+return false;
+```
+
+### 为什么需要 targetRow 变量
+
+这是本题的核心技巧。考虑这个例子：
+
+```text
+matrix = [[1,3,5,7],[10,11,16,20],[23,30,34,60]]
+target = 3
+```
+
+第一层二分过程：
+- `up=0, low=3, mid=1`：`matrix[1][0]=10 > 3`，执行 `low=1`
+- `up=0, low=1, mid=0`：`matrix[0][0]=1 < 3`，执行 `targetRow=0, up=1`
+- 循环结束，`up=1, low=1`
+
+此时如果直接用 `up` 或 `low` 作为目标行：
+- `up = 1` 指向第 1 行 `[10,11,16,20]`，但 target 3 实际在第 0 行
+- `low = 1` 同样错误
+
+而 `targetRow = 0` 正确记录了"最后一个首元素 < target 的行"。
+
+### 开区间 vs 闭区间
+
+本题使用**左闭右开区间** `[left, right)` 的模板：
+- 初始化：`low = row` 而不是 `row - 1`
+- 循环条件：`while(up != low)` 等价于 `while(up < low)`
+- 更新规则：`up = mid + 1` 或 `low = mid`
+
+**也可以使用全闭区间** `[left, right]`，但需要统一修改：
+- 初始化：`low = row - 1`
+- 循环条件：`while(up <= low)`
+- 更新规则：`up = mid + 1` 或 `low = mid - 1`
+
+**关键不在于选哪种区间，而在于：**
+1. 区间定义、循环条件、更新规则必须统一
+2. 使用 `targetRow` 单独记录候选行
+
+### 复杂度
+
+设矩阵大小为 `m × n`：
+
+- **时间复杂度**：`O(log m + log n) = O(log(m × n))`
+  - 第一层二分：`O(log m)`
+  - 第二层二分：`O(log n)`
+- **空间复杂度**：`O(1)`
+
+### 代码
+
+- `leecode74.cpp`
+
 ## 131. Palindrome Partitioning
 
 - **中文名称**：分割回文串
