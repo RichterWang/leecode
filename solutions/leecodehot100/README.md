@@ -1342,6 +1342,201 @@ target = 3
 
 - `leecode74.cpp`
 
+## 33. Search in Rotated Sorted Array
+
+- **中文名称**：搜索旋转排序数组
+- **题目链接**：https://leetcode.com/problems/search-in-rotated-sorted-array/
+- **核心思路**：改良版二分查找。利用旋转数组"至少有一半有序"的特性，判断 target 在哪一半，然后继续二分。
+
+### 问题特点
+
+原本有序的数组在某个位置发生了旋转：
+
+```text
+原数组：[0, 1, 2, 4, 5, 6, 7]
+旋转后：[4, 5, 6, 7, 0, 1, 2]
+```
+
+关键观察：**无论从哪里切分，至少有一半是完全有序的。**
+
+### 核心算法
+
+每次二分后，判断哪一半有序：
+
+```cpp
+if (nums[left] <= nums[mid]) {
+    // 左半 [left, mid] 有序
+} else {
+    // 右半 [mid, right] 有序
+}
+```
+
+**判断依据**：
+- 如果 `nums[left] <= nums[mid]`：从 left 到 mid 单调递增，没有旋转点
+- 否则：旋转点在左半部分，右半部分是有序的
+
+### 利用有序性缩小范围
+
+找到有序的那一半后，判断 target 是否在有序区间内：
+
+```cpp
+// 左半有序的情况
+if (nums[left] <= nums[mid]) {
+    if (nums[left] <= target && target < nums[mid]) {
+        right = mid - 1;  // target 在左半有序区间
+    } else {
+        left = mid + 1;   // target 在右半
+    }
+}
+// 右半有序的情况
+else {
+    if (nums[mid] < target && target <= nums[right]) {
+        left = mid + 1;   // target 在右半有序区间
+    } else {
+        right = mid - 1;  // target 在左半
+    }
+}
+```
+
+### 完整代码实现
+
+```cpp
+int search(vector<int>& nums, int target) {
+    int n = nums.size();
+    if (n == 0) return -1;
+
+    int left = 0, right = n - 1;
+    
+    while (left <= right) {
+        int mid = (left + right) / 2;
+
+        // 找到目标
+        if (nums[mid] == target) return mid;
+
+        // 判断哪一半有序
+        if (nums[left] <= nums[mid]) {
+            // 左半有序
+            if (nums[left] <= target && target < nums[mid]) {
+                right = mid - 1;
+            } else {
+                left = mid + 1;
+            }
+        } else {
+            // 右半有序
+            if (nums[mid] < target && target <= nums[right]) {
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+    }
+
+    return -1;
+}
+```
+
+### 执行过程示例
+
+```text
+nums = [4, 5, 6, 7, 0, 1, 2], target = 0
+
+第一次：left=0, right=6, mid=3
+nums[mid]=7, nums[left]=4 <= nums[mid]=7
+左半 [4,5,6,7] 有序
+target=0 不在 [4,7) 内 → left = 4
+
+第二次：left=4, right=6, mid=5
+nums[mid]=1, nums[left]=0 > nums[mid]=1
+右半 [1,2] 有序
+target=0 不在 (1,2] 内 → right = 4
+
+第三次：left=4, right=4, mid=4
+nums[mid]=0 == target
+返回 4
+```
+
+### 关键细节
+
+#### 1. 有序性判断中的等号
+
+```cpp
+if (nums[left] <= nums[mid])  // ✓ 必须有 =
+```
+
+**为什么需要 `=`？**
+
+当 `left` 和 `mid` 相邻时（例如 `left=0, mid=0`），`nums[left] == nums[mid]` 成立，此时左半部分退化为单个元素，仍然是"有序"的。
+
+#### 2. 区间边界的严格性
+
+左半有序时：
+```cpp
+if (nums[left] <= target && target < nums[mid])
+   ↑ 包含左边界              ↑ 不包含 mid
+```
+
+右半有序时：
+```cpp
+if (nums[mid] < target && target <= nums[right])
+   ↑ 不包含 mid              ↑ 包含右边界
+```
+
+**为什么不对称？**
+- `nums[mid]` 已经在外层检查过了（`if (nums[mid] == target)`）
+- 如果执行到这里，说明 `nums[mid] != target`
+- 因此两个区间检查都用 `< nums[mid]`，避免重复检查
+
+#### 3. 边界情况
+
+- **数组长度为 1**：`left=0, right=0, mid=0`，一次比较即可
+- **数组未旋转**：左半始终有序，退化为标准二分查找
+- **target 是数组最小值**：在旋转点位置，需要正确判断在哪一半
+
+### 复杂度
+
+- **时间复杂度**：O(log n) - 每次排除一半元素
+- **空间复杂度**：O(1) - 只使用常数个变量
+
+### 常见错误
+
+#### 错误 1：忘记等号
+
+```cpp
+if (nums[left] < nums[mid])  // ❌ 少了 =
+```
+
+会导致 `left == mid` 时判断错误。
+
+#### 错误 2：区间检查不严格
+
+```cpp
+if (nums[left] <= target && target <= nums[mid])  // ❌ 包含了 mid
+```
+
+这会导致当 `target == nums[mid]` 但外层已经检查过时，仍然进入错误分支。
+
+#### 错误 3：使用左闭右开区间但访问越界
+
+```cpp
+int right = n;  // 左闭右开
+if (nums[mid] < target && target <= nums[right])  // ❌ 越界！
+```
+
+`nums[right]` 访问了 `nums[n]`，超出数组范围。
+
+**建议**：对于这道题，使用全闭区间 `[left, right]` 更清晰，因为需要比较边界值。
+
+### 相关题目
+
+- **LeetCode 34**：在排序数组中查找元素的第一个和最后一个位置 - 二分查找边界
+- **LeetCode 81**：搜索旋转排序数组 II - 允许重复元素的变体
+- **LeetCode 153**：寻找旋转排序数组中的最小值 - 找旋转点
+- **LeetCode 35**：搜索插入位置 - 基础二分查找
+
+### 代码
+
+- `leecode33.cpp`
+
 ## 131. Palindrome Partitioning
 
 - **中文名称**：分割回文串
@@ -1555,3 +1750,223 @@ current_index = i + 1
 ### 代码
 
 - `leecode131.cpp`
+
+## 34. Find First and Last Position of Element in Sorted Array
+
+- **中文名称**：在排序数组中查找元素的第一个和最后一个位置
+- **题目链接**：https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/
+- **核心思路**：两次二分查找。第一次找左边界（第一次出现），第二次找右边界（最后一次出现）。
+
+### 问题要求
+
+给定一个按非递减顺序排列的整数数组 `nums`，和一个目标值 `target`。找出给定目标值在数组中的开始位置和结束位置。
+
+如果数组中不存在目标值 `target`，返回 `[-1, -1]`。
+
+要求：时间复杂度为 `O(log n)`。
+
+### 核心思路：两次独立的二分查找
+
+虽然是找一个区间，但不能用一次二分"找到后向两边扩展"，因为那样最坏会退化到 `O(n)`。
+
+正确做法是：
+1. **第一次二分**：找 target 的最左边界（第一次出现的位置）
+2. **第二次二分**：找 target 的最右边界（最后一次出现的位置）
+
+两次二分是**完全独立**的，使用不同的搜索逻辑。
+
+### 寻找左边界的二分
+
+目标：找到第一个等于 target 的位置。
+
+```cpp
+int left = 0, right = n - 1;
+int left_bound = -1;
+
+while (left <= right) {
+    int mid = (left + right) / 2;
+    
+    if (nums[mid] == target) {
+        left_bound = mid;      // 找到目标，但不立即返回
+        right = mid - 1;       // 继续向左搜索
+    } else if (nums[mid] < target) {
+        left = mid + 1;
+    } else {
+        right = mid - 1;
+    }
+}
+```
+
+**关键点**：
+- 找到 target 后**不立即返回**
+- 记录当前位置后，把 `right = mid - 1`，继续在左半边找
+- 这样能保证找到**最左边**的 target
+
+### 寻找右边界的二分
+
+目标：找到最后一个等于 target 的位置。
+
+```cpp
+int left = 0, right = n - 1;
+int right_bound = -1;
+
+while (left <= right) {
+    int mid = (left + right) / 2;
+    
+    if (nums[mid] == target) {
+        right_bound = mid;     // 找到目标，但不立即返回
+        left = mid + 1;        // 继续向右搜索
+    } else if (nums[mid] < target) {
+        left = mid + 1;
+    } else {
+        right = mid - 1;
+    }
+}
+```
+
+**关键点**：
+- 找到 target 后**不立即返回**
+- 记录当前位置后，把 `left = mid + 1`，继续在右半边找
+- 这样能保证找到**最右边**的 target
+
+### 两次二分的唯一区别
+
+| | 左边界 | 右边界 |
+|---|---|---|
+| 找到 target 后 | `right = mid - 1` | `left = mid + 1` |
+| 搜索方向 | 继续向左 | 继续向右 |
+| 目的 | 找第一次出现 | 找最后一次出现 |
+
+其他逻辑完全相同。
+
+### 最终判断
+
+如果 target 不存在，两次二分都会返回 `-1`：
+
+```cpp
+if (left_bound <= right_bound) {
+    answer[0] = left_bound;
+    answer[1] = right_bound;
+}
+```
+
+这个判断也可以写成：
+
+```cpp
+if (left_bound != -1 && right_bound != -1)
+```
+
+因为如果找到了 target，必然有 `left_bound <= right_bound`。
+
+### 示例执行过程
+
+对于 `nums = [5, 7, 7, 8, 8, 8, 10]`，`target = 8`：
+
+#### 第一次二分（找左边界）
+
+```text
+初始：[5, 7, 7, 8, 8, 8, 10]
+       l           m        r
+
+mid=3, nums[3]=8 == target
+记录 left_bound=3，继续向左：right=2
+
+[5, 7, 7]
+ l  m  r
+
+mid=1, nums[1]=7 < 8
+left=2
+
+[7]
+ l/m/r
+
+mid=2, nums[2]=7 < 8
+left=3, left > right，结束
+
+left_bound = 3
+```
+
+#### 第二次二分（找右边界）
+
+```text
+初始：[5, 7, 7, 8, 8, 8, 10]
+       l           m        r
+
+mid=3, nums[3]=8 == target
+记录 right_bound=3，继续向右：left=4
+
+            [8, 8, 10]
+             l  m   r
+
+mid=5, nums[5]=8 == target
+记录 right_bound=5，继续向右：left=6
+
+                  [10]
+                   l/m/r
+
+mid=6, nums[6]=10 > 8
+right=5, left > right，结束
+
+right_bound = 5
+```
+
+最终结果：`[3, 5]`
+
+### 常见错误
+
+**错误 1：找到后立即返回**
+
+```cpp
+// ❌ 错误
+if (nums[mid] == target) {
+    return mid;  // 可能不是最左或最右的位置
+}
+```
+
+这样只能找到任意一个 target，无法保证是边界。
+
+**错误 2：用一次二分找到后向两边扩展**
+
+```cpp
+// ❌ 时间复杂度退化
+int pos = binarySearch(nums, target);
+while (left > 0 && nums[left-1] == target) left--;
+while (right < n-1 && nums[right+1] == target) right++;
+```
+
+最坏情况（数组全是 target）退化到 `O(n)`。
+
+**错误 3：两次二分使用相同逻辑**
+
+两次二分的更新方向必须相反：
+- 找左边界：`right = mid - 1`
+- 找右边界：`left = mid + 1`
+
+### 与 C++ STL 的对应关系
+
+- `std::lower_bound`：返回第一个 >= target 的位置（左边界）
+- `std::upper_bound`：返回第一个 > target 的位置
+
+如果允许使用 STL：
+
+```cpp
+auto left = lower_bound(nums.begin(), nums.end(), target);
+auto right = upper_bound(nums.begin(), nums.end(), target);
+
+if (left != nums.end() && *left == target) {
+    return {left - nums.begin(), right - nums.begin() - 1};
+}
+return {-1, -1};
+```
+
+但本题要求自己实现二分查找。
+
+### 复杂度
+
+- **时间复杂度**：`O(log n)`
+  - 两次独立的二分查找，每次 `O(log n)`
+- **空间复杂度**：`O(1)`
+
+### 代码
+
+- `leecode34.cpp`
