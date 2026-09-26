@@ -1970,3 +1970,201 @@ return {-1, -1};
 ### 代码
 
 - `leecode34.cpp`
+
+## 153. Find Minimum in Rotated Sorted Array
+
+- **中文名称**：寻找旋转排序数组中的最小值
+- **题目链接**：https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/
+- **核心思路**：二分找边界。和 `nums[right]` 比较判断 `mid` 落在哪一段，收缩到唯一位置即为答案。
+
+### 题意澄清
+
+"旋转"描述的是**输入是怎么产生的**，不是需要执行的操作。拿到的 `nums` 已经是旋转后的结果，只需要找最小值，不存在"先旋转再找"两个步骤。
+
+旋转后的数组永远是**两段各自升序**，且段 A 的所有元素都大于段 B 的所有元素：
+
+```text
+原始:     [0, 1, 2, 4, 5, 6, 7]
+旋转4次:  [4, 5, 6, 7, 0, 1, 2]
+           └─ 段A ─┘  └─段B─┘
+```
+
+最小值就在段 B 的开头，也就是"断崖"的右边。如果旋转 n 次（转满一圈），数组回到原样，最小值在下标 0。
+
+### 为什么不能直接扫一遍
+
+`min_element` 一次遍历就能出答案，但那是 `O(n)`。题目明确要求 `O(log n)`，必须二分。
+
+### 判定条件
+
+把数组抽象成一个由 F 变 T 的 01 序列，判定条件是"`nums[i]` 是否落在小的那段里"：
+
+```text
+下标:  0  1  2  3  4  5  6
+值:    4  5  6  7  0  1  2
+判定:  F  F  F  F  T  T  T
+                   ↑ 第一个 T = 最小值
+```
+
+判断 `mid` 在哪一段，和 `nums[right]` 比较：
+
+```cpp
+if (nums[mid] > nums[right]) left = mid + 1;   // mid 在段A（F），答案在右
+else                         right = mid;      // mid 在段B（T），mid 本身可能是答案
+```
+
+### 完整实现
+
+```cpp
+int findMin(vector<int>& nums) {
+    int n = static_cast<int>(nums.size());
+
+    int left = 0, right = n - 1;
+    while (left < right) {
+        int mid = (left + right) / 2;
+
+        if (nums[mid] > nums[right]) left = mid + 1;
+        else right = mid;
+    }
+
+    return nums[left];   // left == right，收缩到唯一位置
+}
+```
+
+不需要 `if (n == 1)` 特判，也不需要单独处理"未旋转"的情况，循环条件天然覆盖两者。
+
+### 逐轮跟踪
+
+`nums = [4,5,6,7,0,1,2]`，答案应为 0（下标 4）：
+
+| 轮 | left | right | mid | nums[mid] | nums[right] | 比较 | 动作 |
+|---|------|-------|-----|-----------|-------------|------|------|
+| 1 | 0 | 6 | 3 | 7 | 2 | 7 > 2 | `left = 4` |
+| 2 | 4 | 6 | 5 | 1 | 2 | 1 < 2 | `right = 5` |
+| 3 | 4 | 5 | 4 | 0 | 1 | 0 < 1 | `right = 4` |
+| — | 4 | 4 | — | — | — | 退出 | `return nums[4] = 0` |
+
+未旋转的 `[0,1,2,4,5,6,7]`：每轮都走 `else`，区间一路往左收到 0，返回 `nums[0] = 0`。
+
+`n == 1` 时 `left == right == 0`，循环体一次都不执行，直接返回 `nums[0]`。
+
+### 三个固定写法的原因
+
+#### 1. `while (left < right)` 不能用 `<=`
+
+`right = mid` 不缩小上界。若 `left == right`，则 `mid == left == right`，`right = mid` 原地不动 → 死循环。
+
+#### 2. `right = mid` 不能写 `mid - 1`
+
+`else` 分支说明 `nums[mid] <= nums[right]`，mid 在小的那段，**它本身可能就是答案**。
+
+反例 `[3,1,2]`：
+
+```text
+left=0, right=2, mid=1, nums[1]=1 <= nums[2]=2
+若 right = mid - 1 = 0  →  答案下标 1 被排除
+最终返回 nums[0] = 3    ✗（正确答案是 1）
+```
+
+#### 3. `left = mid + 1` 必须加 1
+
+`if` 分支说明 `nums[mid] > nums[right]`，mid 严格大于某个元素，**确定不是最小值**，可以安全排除。不加 1 同样死循环。
+
+### 为什么和 `nums[right]` 比而不是 `nums[left]`
+
+`nums[right]` 有个稳定的不变量：最小值 `<= nums[right]` 恒成立。
+
+跟 `nums[left]` 比的话，整段升序时 `nums[mid] > nums[left]` 也成立，会误判成"在大的那段"而往右跑，需要额外分支处理"整段已升序"的情况，分支更多、更容易写错。
+
+### 和经典二分的区别
+
+这题区间确实是闭的 `[left, right]`，但循环形态和"闭区间找具体值"不一样，差别在于**这题没有 target**。
+
+| | 经典二分（找值） | 本题（找边界） |
+|---|---|---|
+| 循环条件 | `left <= right` | `left < right` |
+| 提前返回 | 有，`== target` | 无 |
+| 左更新 | `left = mid + 1` | `left = mid + 1` |
+| 右更新 | `right = mid - 1` | `right = mid` |
+| 终止方式 | 命中或区间为空 | 区间收缩到单点 |
+
+没有 target 可比，就没有提前返回的出口，唯一的终止方式是把区间收缩到只剩一个元素。
+
+### 通用模板：找第一个满足条件的位置
+
+```cpp
+int left = 0, right = n - 1;
+while (left < right) {
+    int mid = left + (right - left) / 2;
+    if (!check(mid)) left = mid + 1;   // mid 是 F，答案在右
+    else             right = mid;      // mid 是 T，答案在 mid 或左
+}
+return left;
+```
+
+只有三处需要填：`check` 的内容、初始区间、返回值形式（下标还是 `nums[left]`）。其余固定不动。
+
+本题的 `check(mid)` 就是 `nums[mid] <= nums[right]`。
+
+**前提是单调性**：一旦某个位置满足条件，它右边必须全部满足。否则二分无从下手。
+
+### 镜像模板：找最后一个满足条件的位置
+
+```cpp
+int left = 0, right = n - 1;
+while (left < right) {
+    int mid = left + (right - left + 1) / 2;   // ← 上取整
+    if (check(mid)) left = mid;
+    else            right = mid - 1;
+}
+return left;
+```
+
+`mid` 必须**上取整**，否则 `left = mid` 在 `right == left + 1` 时原地不动，死循环。
+
+记法：**哪边不动，mid 就往那边偏**。
+
+- `right = mid` 不动 → mid 下取整 `(right - left) / 2`
+- `left = mid` 不动 → mid 上取整 `(right - left + 1) / 2`
+
+### 值域二分（二分答案）
+
+骨架完全一样，只是不在下标上二分，而在答案的取值范围上，`check` 变成独立的可行性判定函数：
+
+```cpp
+int lo = 答案下界, hi = 答案上界;
+while (lo < hi) {
+    int mid = lo + (hi - lo) / 2;
+    if (check(mid)) hi = mid;      // mid 可行，试更小
+    else            lo = mid + 1;  // mid 不可行，必须更大
+}
+return lo;
+```
+
+"分割数组的最大值""爱吃香蕉的珂珂"都是这个形态。
+
+### 写之前先答三句
+
+1. 判定条件是什么？用一句话说清"位置 i 是否满足 X"
+2. 这个条件单调吗？F 全在左、T 全在右？
+3. 要第一个 T 还是最后一个 F？→ 决定用哪个模板
+
+### 关于 mid 的溢出
+
+`mid = left + (right - left) / 2` 比 `(left + right) / 2` 更稳，避免 `left + right` 超出 `int` 范围。本题数据量（`n <= 5000`）不会溢出，但在值域二分里边界可能接近 `INT_MAX`，是个值得养成的习惯。
+
+### 复杂度
+
+- **时间复杂度**：`O(log n)`，每轮区间至少减半
+- **空间复杂度**：`O(1)`
+
+### 相关题目
+
+- **LeetCode 154**：寻找旋转排序数组中的最小值 II — 允许重复元素，`nums[mid] == nums[right]` 时只能 `right--`，最坏退化到 `O(n)`
+- **LeetCode 33**：搜索旋转排序数组 — 先定位断点再判断 target 在哪段
+- **LeetCode 35**：搜索插入位置 — 最纯粹的"找第一个 >= target"
+- **LeetCode 34**：元素首尾位置 — 左右边界各二分一次
+
+### 代码
+
+- `leecode153.cpp`
