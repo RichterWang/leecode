@@ -64,6 +64,7 @@ by-topic/<topic>/<problem-id>-<problem-slug>/
 
 ### String
 
+- `1807-evaluate-the-bracket-pairs-of-a-string`
 - `2213-longest-substring-of-one-repeating-character`
 - `3302-find-the-lexicographically-smallest-valid-sequence`
 - `string-matching`
