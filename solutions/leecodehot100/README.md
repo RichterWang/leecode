@@ -1,5 +1,169 @@
 # LeetCode Hot 100
 
+## 4. Median of Two Sorted Arrays
+
+- **中文名称**：寻找两个正序数组的中位数
+- **题目链接**：https://leetcode.com/problems/median-of-two-sorted-arrays/
+- **核心思路**：二分切割。在较短数组上二分搜索切割位置，使得两个数组的左半部分元素总数等于右半部分，且左半部分的最大值 <= 右半部分的最小值。
+
+### 问题本质
+
+中位数的本质是**将数组分成左右两部分，使得左右元素数量相等（或相差 1）**。
+
+对于两个有序数组，不需要真正合并，只需要找到合适的**切割位置**。
+
+### 切割位置的含义
+
+在 nums1 中切割位置 `i` 表示：
+- 左半部分包含 `nums1[0...i-1]`，共 `i` 个元素
+- 右半部分包含 `nums1[i...m-1]`，共 `m-i` 个元素
+
+`i` 的取值范围是 `[0, m]`：
+- `i = 0`：nums1 的所有元素都在右半部分
+- `i = m`：nums1 的所有元素都在左半部分
+
+同理，`j` 的取值范围是 `[0, n]`。
+
+### 为什么用左闭右闭区间 [0, m]
+
+**你的理解完全正确！**
+
+因为需要取边界元素做判断：
+- `nums1[i-1]`：nums1 左半部分的最大值
+- `nums1[i]`：nums1 右半部分的最小值
+- `nums2[j-1]`：nums2 左半部分的最大值
+- `nums2[j]`：nums2 右半部分的最小值
+
+必须允许 `i = 0` 和 `i = m`：
+- 当 `i = 0` 时，nums1 左半部分为空，用 `INT_MIN` 表示
+- 当 `i = m` 时，nums1 右半部分为空，用 `INT_MAX` 表示
+
+如果使用左闭右开区间 `[0, m)`，就无法表示 `i = m` 的情况，会漏掉"nums1 全部在左半部分"的合法切割。
+
+**这不是传统的"在数组中查找某个值"的二分，而是"在切割位置空间上二分"。**
+
+### 核心公式
+
+```cpp
+j = (m + n + 1) / 2 - i
+```
+
+含义：左半部分元素总数应该是 `(m+n+1)/2`，所以 `i + j = (m+n+1)/2`。
+
+### 判定条件
+
+切割位置合法的条件：
+
+```cpp
+nums1[i-1] <= nums2[j]  &&  nums2[j-1] <= nums1[i]
+```
+
+**交叉比较**确保左半部分所有元素 <= 右半部分所有元素。
+
+### 调整方向
+
+```cpp
+if (nums1[i-1] > nums2[j]) {
+    // i 太大了，nums1 切多了
+    right = i - 1;
+} else {
+    // i 太小了，nums1 切少了
+    left = i + 1;
+}
+```
+
+### 边界处理
+
+```cpp
+int maxLeftA = (i == 0) ? INT_MIN : nums1[i - 1];
+int minRightA = (i == m) ? INT_MAX : nums1[i];
+int maxLeftB = (j == 0) ? INT_MIN : nums2[j - 1];
+int minRightB = (j == n) ? INT_MAX : nums2[j];
+```
+
+这四个变量处理了所有边界情况。
+
+### 计算中位数
+
+找到合法切割位置后：
+
+```cpp
+if ((m + n) % 2 == 0) {
+    // 偶数：左边最大和右边最小的平均值
+    return (max(maxLeftA, maxLeftB) + min(minRightA, minRightB)) / 2.0;
+} else {
+    // 奇数：左边最大（因为左边多一个元素）
+    return max(maxLeftA, maxLeftB);
+}
+```
+
+### 运算符优先级陷阱
+
+**重要提醒**：代码中有一个潜在的 bug：
+
+```cpp
+if((m + n) & 1 == 0)  // ❌ 错误！
+```
+
+C++ 中 `==` 的优先级**高于** `&`，实际执行顺序是：
+
+```cpp
+(m + n) & (1 == 0)  // 1 == 0 → 0
+→ (m + n) & 0
+→ 0（永远为 false）
+```
+
+**正确写法**：
+
+```cpp
+if(((m + n) & 1) == 0)  // ✓ 加括号
+// 或
+if((m + n) % 2 == 0)    // ✓ 更清晰
+```
+
+### 为什么在较短数组上二分
+
+```cpp
+if(m > n) return findMedianSortedArrays(nums2, nums1);
+```
+
+确保 `j = (m+n+1)/2 - i >= 0` 始终成立。如果在较长数组上二分，可能出现 `j < 0` 的非法情况。
+
+### 图解示例
+
+```text
+nums1 = [1, 3, 5, 7]  (m = 4)
+nums2 = [2, 4, 6]      (n = 3)
+
+切割位置 i = 2, j = 2:
+
+nums1:  1   3 | 5   7
+             i=2
+nums2:  2   4 | 6
+             j=2
+
+左半部分：{1, 3, 2, 4}  (4个)
+右半部分：{5, 7, 6}     (3个)
+
+检查：
+maxLeftA = 3, minRightA = 5
+maxLeftB = 4, minRightB = 6
+
+3 <= 6 ✓
+4 <= 5 ✓
+
+中位数 = max(3, 4) = 4
+```
+
+### 复杂度
+
+- **时间复杂度**：`O(log(min(m, n)))`
+- **空间复杂度**：`O(1)`
+
+### 代码
+
+- `leecode4.cpp`
+
 ## 56. Merge Intervals
 
 - **题目链接**：https://leetcode.com/problems/merge-intervals/
@@ -1970,6 +2134,439 @@ return {-1, -1};
 ### 代码
 
 - `leecode34.cpp`
+
+## 155. Min Stack
+
+- **中文名称**：最小栈
+- **题目链接**：https://leetcode.com/problems/min-stack/
+- **核心思路**：双栈法。主栈存储所有元素，辅助栈存储每个状态下的最小值。
+
+### 问题要求
+
+设计一个支持 `push`、`pop`、`top` 和 `getMin` 操作的栈，其中 `getMin` 能在**常数时间**内检索到栈中的最小元素。
+
+### 核心思路：辅助栈同步最小值
+
+使用两个栈：
+- `stk`：主栈，存储所有元素
+- `help_stk`：辅助栈，存储每个状态下的最小值
+
+#### 关键思想
+
+辅助栈的栈顶始终保存**当前主栈中的最小值**。
+
+当主栈压入新元素时：
+- 如果新元素 ≤ 当前最小值，也压入辅助栈
+- 这样辅助栈栈顶就是当前状态的最小值
+
+当主栈弹出元素时：
+- 如果弹出的元素等于辅助栈栈顶（是当前最小值），辅助栈也弹出
+- 这样辅助栈栈顶就回到了上一个状态的最小值
+
+### 操作实现
+
+#### push 操作
+
+```cpp
+void push(int value) {
+    stk.push(value);
+    
+    if(help_stk.empty() || value <= help_stk.top()) {
+        help_stk.push(value);
+    }
+}
+```
+
+**关键点**：
+- 主栈无条件压入
+- 辅助栈只在新元素 **≤** 当前最小值时压入
+- 必须用 `<=` 而不是 `<`，因为可能有重复的最小值
+
+#### pop 操作
+
+```cpp
+void pop() {
+    if(stk.empty()) return;
+    
+    if(stk.top() == help_stk.top()) {
+        help_stk.pop();
+    }
+    stk.pop();
+}
+```
+
+**关键点**：
+- 先检查主栈是否为空（虽然题目保证调用时栈非空）
+- 如果弹出的是当前最小值，辅助栈同步弹出
+- 必须先判断后弹出，因为弹出后无法获取值
+
+#### getMin 操作
+
+```cpp
+int getMin() {
+    return help_stk.top();
+}
+```
+
+**O(1) 时间复杂度**：直接返回辅助栈栈顶。
+
+### 为什么必须用 <=
+
+考虑序列 `[2, 2, 1]`：
+
+使用 `<`（错误）：
+```text
+push(2): stk=[2], help_stk=[2]
+push(2): stk=[2,2], help_stk=[2]      ← 第二个 2 没有入辅助栈
+push(1): stk=[2,2,1], help_stk=[2,1]
+pop():   stk=[2,2], help_stk=[2]      ← 弹出 1
+getMin(): 返回 2                       ✗ 错误！应该返回 2
+```
+
+使用 `<=`（正确）：
+```text
+push(2): stk=[2], help_stk=[2]
+push(2): stk=[2,2], help_stk=[2,2]    ← 重复的最小值也入栈
+push(1): stk=[2,2,1], help_stk=[2,2,1]
+pop():   stk=[2,2], help_stk=[2,2]    ← 弹出 1
+getMin(): 返回 2                       ✓ 正确
+```
+
+**原因**：重复的最小值在不同状态下都是最小值，必须在辅助栈中保留多份。
+
+### 执行示例
+
+操作序列：`push(-2)`, `push(0)`, `push(-3)`, `getMin()`, `pop()`, `top()`, `getMin()`
+
+| 操作 | stk | help_stk | 返回值 |
+|------|-----|----------|--------|
+| push(-2) | [-2] | [-2] | - |
+| push(0) | [-2, 0] | [-2] | - |
+| push(-3) | [-2, 0, -3] | [-2, -3] | - |
+| getMin() | [-2, 0, -3] | [-2, -3] | -3 |
+| pop() | [-2, 0] | [-2] | - |
+| top() | [-2, 0] | [-2] | 0 |
+| getMin() | [-2, 0] | [-2] | -2 |
+
+### RAII 自动资源管理
+
+```cpp
+class MinStack {
+public:
+    MinStack() {
+        // 构造函数保持为空 RAII
+    }
+    
+private:
+    stack<int> stk;
+    stack<int> help_stk;
+};
+```
+
+**为什么构造函数可以为空？**
+
+C++ 的 RAII（Resource Acquisition Is Initialization）机制会**自动调用成员变量的构造函数**。
+
+当创建 `MinStack` 对象时：
+1. 首先自动调用 `stk` 的默认构造函数（创建空栈）
+2. 然后自动调用 `help_stk` 的默认构造函数（创建空栈）
+3. 最后执行 `MinStack()` 构造函数体（为空）
+
+**为什么不需要析构函数？**
+
+同样是 RAII，对象销毁时会：
+1. 执行析构函数体（如果有）
+2. 自动调用 `help_stk` 的析构函数（释放资源）
+3. 自动调用 `stk` 的析构函数（释放资源）
+
+`std::stack` 的析构函数会自动释放内存，不需要手动 `delete`。
+
+**对比手动管理**：
+
+如果用原始指针：
+```cpp
+// ❌ 需要手动管理
+class MinStack {
+    stack<int>* stk;
+    stack<int>* help_stk;
+    
+public:
+    MinStack() {
+        stk = new stack<int>();
+        help_stk = new stack<int>();
+    }
+    
+    ~MinStack() {
+        delete stk;
+        delete help_stk;
+    }
+};
+```
+
+使用 RAII：
+```cpp
+// ✓ 自动管理
+class MinStack {
+    stack<int> stk;
+    stack<int> help_stk;
+    
+public:
+    MinStack() {}  // 可以为空
+    // 不需要析构函数
+};
+```
+
+**malloc/free 也要手动配对**：
+
+```c
+// C 语言
+int* data = (int*)malloc(100 * sizeof(int));
+// 使用 data
+free(data);  // 必须手动释放
+```
+
+**现代 C++ 推荐**：
+- 使用标准库容器（`vector`、`stack`、`string`）
+- 使用智能指针（`unique_ptr`、`shared_ptr`）
+- 避免手动 `new`/`delete` 和 `malloc`/`free`
+
+### 空间优化：单栈 + 差值法
+
+如果要求更优的空间，可以只用一个栈，存储与最小值的差值。但实现更复杂，本题双栈法最清晰。
+
+### 复杂度
+
+- **时间复杂度**：所有操作均为 `O(1)`
+- **空间复杂度**：`O(n)`，最坏情况下辅助栈和主栈大小相同（严格递减序列）
+
+### 代码
+
+- `leecode155.cpp`
+
+## 394. Decode String
+
+- **中文名称**：字符串解码
+- **题目链接**：https://leetcode.com/problems/decode-string/
+- **核心思路**：双栈法。一个栈存储重复次数，另一个栈存储待拼接的字符串，遇到 `[` 时保存状态，遇到 `]` 时弹出并组合。
+
+### 问题描述
+
+给定一个经过编码的字符串，返回它解码后的字符串。
+
+编码规则为：`k[encoded_string]`，表示其中方括号内部的 `encoded_string` 正好重复 `k` 次。
+
+**注意**：
+- `k` 保证为正整数
+- 输入字符串总是有效的，方括号总是成对出现
+- 可能存在嵌套：`3[a2[c]]` → `"accaccacc"`
+
+### 示例
+
+```text
+输入：s = "3[a]2[bc]"
+输出："aaabcbc"
+
+输入：s = "3[a2[c]]"
+输出："accaccacc"
+
+输入：s = "2[abc]3[cd]ef"
+输出："abcabccdcdcdef"
+```
+
+### 核心难点
+
+1. **嵌套结构**：`3[a2[c]]` 需要先处理内层 `2[c]`，再处理外层 `3[...]`
+2. **多位数字**：`100[a]` 中的 100 需要正确识别为一个整体
+3. **混合内容**：`abc3[cd]xyz` 中方括号外的字符要原样保留
+
+### 双栈解法
+
+使用两个栈分别存储：
+- `countStack`：存储重复次数
+- `stringStack`：存储待拼接的字符串
+
+同时维护两个变量：
+- `currentString`：当前正在构建的字符串
+- `currentNum`：当前正在累积的数字
+
+#### 四种字符的处理
+
+**1. 遇到数字**
+
+```cpp
+if (isdigit(ch)) {
+    currentNum = currentNum * 10 + (ch - '0');
+}
+```
+
+累积多位数：`'1' '0' '0'` → 1 → 10 → 100
+
+**2. 遇到 `[`**
+
+```cpp
+countStack.push(currentNum);
+stringStack.push(currentString);
+currentNum = 0;
+currentString = "";
+```
+
+- 保存当前状态（重复次数和已构建字符串）
+- 重置当前状态，准备处理括号内的内容
+- 进入新的一层嵌套
+
+**3. 遇到 `]`**
+
+```cpp
+int repeatCount = countStack.top();
+countStack.pop();
+
+string prevString = stringStack.top();
+stringStack.pop();
+
+// 重复当前字符串
+string temp = "";
+for (int i = 0; i < repeatCount; i++) {
+    temp += currentString;
+}
+
+// 拼接到之前的字符串
+currentString = prevString + temp;
+```
+
+- 弹出保存的状态
+- 将当前字符串重复 `repeatCount` 次
+- 拼接到之前的字符串后面
+- 完成当前层，恢复外层状态
+
+**4. 遇到字母**
+
+```cpp
+currentString += ch;
+```
+
+直接追加到当前字符串。
+
+### 执行过程示例
+
+对于 `s = "3[a2[c]]"`：
+
+| 字符 | currentNum | currentString | countStack | stringStack | 说明 |
+|------|-----------|---------------|-----------|-------------|------|
+| 初始 | 0 | "" | [] | [] | |
+| '3' | 3 | "" | [] | [] | 累积数字 |
+| '[' | 0 | "" | [3] | [""] | 保存状态，进入新层 |
+| 'a' | 0 | "a" | [3] | [""] | 追加字母 |
+| '2' | 2 | "a" | [3] | [""] | 累积数字 |
+| '[' | 0 | "" | [3,2] | ["","a"] | 保存状态，再进入新层 |
+| 'c' | 0 | "c" | [3,2] | ["","a"] | 追加字母 |
+| ']' | 0 | "acc" | [3] | [""] | 2×"c"+"a"="acc" |
+| ']' | 0 | "accaccacc" | [] | [] | 3×"acc" |
+
+**关键转换点**：
+
+**第一个 `]`**：
+- 弹出 count=2, prevString="a"
+- temp = "c" + "c" = "cc"
+- currentString = "a" + "cc" = "acc"
+
+**第二个 `]`**：
+- 弹出 count=3, prevString=""
+- temp = "acc" + "acc" + "acc" = "accaccacc"
+- currentString = "" + "accaccacc" = "accaccacc"
+
+### 为什么需要两个栈
+
+**栈的作用是保存"外层状态"**：
+
+当遇到 `[` 时，需要：
+1. 记住这一层要重复多少次（`countStack`）
+2. 记住进入括号前已经构建了什么（`stringStack`）
+
+遇到 `]` 时，才能正确地：
+1. 知道当前内容要重复几次
+2. 知道重复后要拼接到哪里
+
+**例子**：`"3[a2[c]]"`
+- 处理内层 `2[c]` 时，需要记住外层的 `3` 和 `"a"`
+- 否则无法知道 `"cc"` 要和 `"a"` 拼接，也不知道最后要重复 3 次
+
+### 单栈替代方案
+
+也可以用一个栈存储 `pair<int, string>`：
+
+```cpp
+stack<pair<int, string>> stk;
+
+// 遇到 '['
+stk.push({currentNum, currentString});
+
+// 遇到 ']'
+auto [count, prevStr] = stk.top();
+stk.pop();
+```
+
+逻辑完全相同，只是数据结构不同。双栈版本更直观。
+
+### 边界情况
+
+- `"abc"` → `"abc"`（没有方括号）
+- `"10[a]"` → `"aaaaaaaaaa"`（多位数）
+- `"2[2[y]pq4[2[jk]e1[f]]]ef"` → 深度嵌套
+
+### 为什么不能用递归
+
+递归方案也可行，但需要：
+1. 手动管理字符串的读取位置（索引）
+2. 在递归函数间传递和更新索引
+3. 处理返回值的拼接
+
+双栈方案的优势：
+- 一次线性扫描，状态清晰
+- 不需要管理索引
+- 代码更简洁
+
+### 复杂度
+
+设输入字符串长度为 n，解码后字符串长度为 m：
+
+- **时间复杂度**：O(m)
+  - 每个字符最多被复制 k 次（k 为重复次数）
+  - 总工作量正比于输出长度
+- **空间复杂度**：O(n)
+  - 栈的深度取决于嵌套层数（最多 n）
+  - 临时字符串的空间
+
+### 优化空间
+
+字符串拼接 `temp += currentString` 在循环中效率较低。可以优化为：
+
+```cpp
+// 优化前
+for (int i = 0; i < repeatCount; i++) {
+    temp += currentString;
+}
+
+// 优化后
+temp.reserve(currentString.size() * repeatCount);
+for (int i = 0; i < repeatCount; i++) {
+    temp += currentString;
+}
+```
+
+或者用 `string` 的构造函数：
+
+```cpp
+string temp;
+for (int i = 0; i < repeatCount; i++) {
+    temp.append(currentString);
+}
+```
+
+但对于本题的数据规模，基础实现已经足够。
+
+### 代码
+
+- `leecode394.cpp`
 
 ## 153. Find Minimum in Rotated Sorted Array
 
