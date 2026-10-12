@@ -2906,4 +2906,499 @@ temperatures[i] > temperatures[stk.top()]
 ### 代码
 
 - `leecode739.cpp`
+
+## 215. Kth Largest Element in an Array
+
+- **中文名称**：数组中的第 K 个最大元素
+- **题目链接**：https://leetcode.com/problems/kth-largest-element-in-an-array/
+- **核心思路**：最小堆维护前 K 大元素。堆大小超过 K 时弹出最小值，最后堆顶就是第 K 大。
+
+### 问题描述
+
+给定整数数组 `nums` 和整数 `k`，请返回数组中第 `k` 个最大的元素。
+
+注意：你需要找的是数组排序后的第 `k` 个最大的元素，而不是第 `k` 个不同的元素。
+
+要求：时间复杂度为 `O(n)`。
+
+### 解法一：最小堆（优先队列）
+
+使用大小为 `k` 的最小堆（`priority_queue<int, vector<int>, greater<int>>`）维护当前遇到的前 `k` 个最大元素。
+
+#### 核心思想
+
+- 最小堆的性质：堆顶是堆中最小的元素
+- 维护大小为 `k` 的最小堆，堆中保存的就是当前遇到的前 `k` 大元素
+- 当堆大小超过 `k` 时，弹出堆顶（最小元素），保持堆中只有前 `k` 大的元素
+- 遍历结束后，堆顶就是第 `k` 大的元素
+
+#### 为什么用最小堆而不是最大堆
+
+**用最小堆**：
+```text
+要找第 3 大的元素
+nums = [3, 2, 1, 5, 6, 4]
+
+堆的变化过程：
+[3]          → 大小 1
+[2, 3]       → 大小 2
+[1, 2, 3]    → 大小 3
+[2, 3, 5]    → 弹出 1，加入 5
+[3, 5, 6]    → 弹出 2，加入 6
+[4, 5, 6]    → 弹出 3，加入 4
+
+堆顶 4 就是第 3 大
+```
+
+堆中保存的是 `[4, 5, 6]`，堆顶 `4` 是这三个中最小的，也就是整个数组第 3 大的。
+
+**如果用最大堆**：
+- 需要弹出前 `k-1` 个最大元素
+- 或者把所有元素放入堆，然后弹出 `k-1` 次
+- 时间复杂度变成 `O(n log n)` 或 `O(k log n)`
+
+最小堆只需要维护 `k` 个元素，空间更优，且逻辑更简单。
+
+#### 代码实现
+
+```cpp
+int findKthLargest(vector<int>& nums, int k) {
+    priority_queue<int, vector<int>, greater<int>> minHeap;
+    
+    for (int num : nums) {
+        minHeap.push(num);
+        if (minHeap.size() > k) {
+            minHeap.pop();
+        }
+    }
+    
+    return minHeap.top();
+}
+```
+
+**注意**：
+- `minHeap.size()` 返回 `size_t`（无符号类型），与 `int` 类型的 `k` 比较时会自动转换
+- 也可以写成 `if (static_cast<int>(minHeap.size()) > k)`，更严格
+
+#### 复杂度
+
+- **时间复杂度**：`O(n log k)`
+  - 遍历 `n` 个元素
+  - 每次堆操作（`push`/`pop`）是 `O(log k)`
+  - 总共：`O(n log k)`
+- **空间复杂度**：`O(k)`，堆的大小始终不超过 `k`
+
+虽然题目要求 `O(n)`，但在实践中 `O(n log k)` 已经很高效，尤其是 `k` 较小时。
+
+### 解法二：快速选择（Quick Select）
+
+这是真正 `O(n)` 平均时间复杂度的解法，基于快速排序的分区思想。
+
+#### 核心思想
+
+快速排序的分区操作会将数组分成三部分：
+```text
+[小于 pivot] [pivot] [大于 pivot]
+```
+
+如果 `pivot` 的位置恰好是第 `k` 大，就找到了答案；否则递归到对应的一半。
+
+#### 为什么是 O(n)
+
+每次分区排除一半元素：
+```text
+n + n/2 + n/4 + ... = 2n = O(n)
+```
+
+这是**平均情况**。最坏情况（每次都选到最值作为 pivot）会退化到 `O(n²)`。
+
+#### 优化：三数取中
+
+选择 pivot 时，取首、中、尾三个元素的中位数，可以有效避免最坏情况。
+
+#### 对比两种解法
+
+| | 最小堆 | 快速选择 |
+|---|---|---|
+| 平均时间 | O(n log k) | O(n) |
+| 最坏时间 | O(n log k) | O(n²) |
+| 空间 | O(k) | O(log n)（递归栈） |
+| 稳定性 | 稳定 | 不稳定 |
+| 实现难度 | 简单 | 中等 |
+| 是否修改原数组 | 否 | 是 |
+
+**选择建议**：
+- `k` 很小（如 `k < 10`）：最小堆更优，`log k` 几乎是常数
+- `k` 接近 `n`：快速选择更优
+- 不能修改原数组：只能用最小堆
+- 追求代码简洁：最小堆
+
+### 解法三：计数排序（特殊情况）
+
+如果数组元素范围很小（如 `-10^4 <= nums[i] <= 10^4`），可以用计数排序：
+
+```cpp
+int findKthLargest(vector<int>& nums, int k) {
+    const int OFFSET = 10000;
+    vector<int> count(20001, 0);
+    
+    for (int num : nums) {
+        count[num + OFFSET]++;
+    }
+    
+    int sum = 0;
+    for (int i = 20000; i >= 0; i--) {
+        sum += count[i];
+        if (sum >= k) {
+            return i - OFFSET;
+        }
+    }
+    
+    return -1;
+}
+```
+
+- **时间复杂度**：`O(n + m)`，其中 `m` 是值域范围
+- **空间复杂度**：`O(m)`
+
+但这种方法有局限性，只适用于值域较小的情况。
+
+### 常见错误
+
+**错误 1：使用最大堆但没有正确处理**
+
+```cpp
+// ❌ 错误
+priority_queue<int> maxHeap;  // 默认是最大堆
+for (int num : nums) {
+    maxHeap.push(num);
+}
+// 需要弹出 k-1 次，容易出错
+```
+
+**错误 2：堆大小判断错误**
+
+```cpp
+// ❌ 错误
+if (minHeap.size() == k) {
+    minHeap.pop();  // 会导致堆大小变成 k-1
+    minHeap.push(num);
+}
+```
+
+应该是 `> k` 而不是 `== k`。
+
+**错误 3：混淆第 k 大和第 k 小**
+
+- 第 k 大：从大到小排第 k 个
+- 第 k 小：从小到大排第 k 个
+
+本题求的是第 k **大**，用最小堆维护前 k 大元素。
+
+### 相关题目
+
+- **LeetCode 347**：前 K 个高频元素 - 同样用最小堆
+- **LeetCode 703**：数据流中的第 K 大元素 - 维护最小堆
+- **LeetCode 973**：最接近原点的 K 个点 - 最大堆或快速选择
+- **LeetCode 215** 的变体：找第 k 小的元素 - 改用最大堆
+
+### 代码
+
+- `leecode215.cpp`
+
+## 347. Top K Frequent Elements
+
+- **中文名称**：前 K 个高频元素
+- **题目链接**：https://leetcode.com/problems/top-k-frequent-elements/
+- **核心思路**：最小堆维护前 K 高频元素。堆中存 `{元素, 频率}` 对，按频率比较，堆大小超过 K 时弹出频率最小的。
+
+### 问题描述
+
+给定一个整数数组 `nums` 和一个整数 `k`，返回出现频率前 `k` 高的元素。可以按任意顺序返回答案。
+
+**要求**：时间复杂度必须优于 `O(n log n)`，其中 `n` 是数组大小。
+
+### 示例
+
+```text
+输入：nums = [1,1,1,2,2,3], k = 2
+输出：[1,2]
+
+输入：nums = [1], k = 1
+输出：[1]
+```
+
+### 解法一：最小堆（推荐）
+
+#### 核心思想
+
+1. **统计频率**：用哈希表统计每个元素的出现次数
+2. **维护最小堆**：堆中保存 `{元素, 频率}` 对，按频率建立最小堆
+3. **保持堆大小为 K**：遍历哈希表，当堆大小超过 K 时弹出频率最小的元素
+4. **收集结果**：最终堆中剩余的就是前 K 高频元素
+
+#### 为什么用最小堆
+
+和 LeetCode 215（第 K 大元素）同理：
+
+**用最小堆维护前 K 大（高频）**：
+- 堆中保存频率最高的 K 个元素
+- 堆顶是这 K 个中频率最小的
+- 当新元素频率更高时，弹出堆顶，加入新元素
+- 空间只需 `O(k)`
+
+**如果用最大堆**：
+- 需要把所有元素都放入堆
+- 然后弹出 K 次
+- 空间需要 `O(n)`，且操作更多
+
+#### 数据结构选择
+
+**pair 的两种组织方式**：
+
+**方式一：`{元素, 频率}`**（推荐）
+```cpp
+minHeap.push({entry.first, entry.second});  // {元素, 频率}
+```
+- pair.first = 元素值
+- pair.second = 频率
+- 比较器：`a.second > b.second`（比较频率）
+- 取结果：`minHeap.top().first`（取元素）
+
+**方式二：`{频率, 元素}`**
+```cpp
+minHeap.push({entry.second, entry.first});  // {频率, 元素}
+```
+- pair.first = 频率
+- pair.second = 元素值
+- 比较器：`a.first > b.first`（比较频率）
+- 取结果：`minHeap.top().second`（取元素）
+
+两种方式都可以，但**方式一**更符合直觉（元素是主体，频率是属性）。
+
+#### Lambda 比较器详解
+
+```cpp
+auto cmp = [](const pair<int, int>& a, const pair<int, int>& b) {
+    return a.second > b.second;
+};
+```
+
+**关键点**：
+- `a.second > b.second` 返回 `true` 时，`a` 的优先级**更低**
+- 优先队列的比较器语义是"谁优先级低"，不是"谁应该在前"
+- 频率大的优先级低 → 留在堆里 → 频率小的在堆顶 → 最小堆
+
+**为什么不用默认比较器**：
+
+`greater<pair<int, int>>` 会先比较 first，再比较 second：
+- 如果用方式一 `{元素, 频率}`，会按元素值排序，错误
+- 如果用方式二 `{频率, 元素}`，可以工作，但频率相同时会按元素值排序
+
+Lambda 比较器明确表达"只按频率比较"的意图，代码更清晰。
+
+#### 完整实现
+
+```cpp
+vector<int> topKFrequent(vector<int>& nums, int k) {
+    vector<int> result;
+    unordered_map<int, int> frequencyMap;
+
+    // 1. 统计频率
+    for (int num : nums) {
+        frequencyMap[num]++;
+    }
+
+    // 2. 定义最小堆比较器
+    auto cmp = [](const pair<int, int>& a, const pair<int, int>& b) {
+        return a.second > b.second;  // 按频率比较
+    };
+
+    // 3. 维护大小为 k 的最小堆
+    priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(cmp)> minHeap(cmp);
+    for (const auto& entry : frequencyMap) {
+        minHeap.push({entry.first, entry.second});  // {元素, 频率}
+        if (minHeap.size() > k) {
+            minHeap.pop();
+        }
+    }
+
+    // 4. 收集结果
+    while (!minHeap.empty()) {
+        result.push_back(minHeap.top().first);
+        minHeap.pop();
+    }
+
+    return result;
+}
+```
+
+#### 复杂度
+
+设数组长度为 `n`，不同元素个数为 `m`（`m <= n`）：
+
+- **时间复杂度**：`O(n + m log k)`
+  - 统计频率：`O(n)`
+  - 遍历哈希表，每次堆操作 `O(log k)`：`O(m log k)`
+  - 最坏情况 `m = n`（所有元素不同），总复杂度 `O(n log k)`
+  - 当 `k << n` 时，`O(n log k) < O(n log n)`，满足题目要求
+
+- **空间复杂度**：`O(n)`
+  - 哈希表：`O(m)`，最坏 `O(n)`
+  - 最小堆：`O(k)`
+  - 总共：`O(n)`
+
+### 解法二：桶排序
+
+如果要求 `O(n)` 严格线性时间，可以用桶排序。
+
+#### 核心思想
+
+频率的范围是 `[1, n]`，用 `n + 1` 个桶，`bucket[i]` 存储频率为 `i` 的所有元素。
+
+```cpp
+vector<int> topKFrequent(vector<int>& nums, int k) {
+    int n = nums.size();
+    unordered_map<int, int> freqMap;
+    
+    // 统计频率
+    for (int num : nums) {
+        freqMap[num]++;
+    }
+    
+    // 桶排序：bucket[i] 存放频率为 i 的元素
+    vector<vector<int>> bucket(n + 1);
+    for (const auto& [num, freq] : freqMap) {
+        bucket[freq].push_back(num);
+    }
+    
+    // 从高频到低频收集结果
+    vector<int> result;
+    for (int freq = n; freq > 0 && result.size() < k; freq--) {
+        for (int num : bucket[freq]) {
+            result.push_back(num);
+            if (result.size() == k) {
+                break;
+            }
+        }
+    }
+    
+    return result;
+}
+```
+
+#### 复杂度
+
+- **时间复杂度**：`O(n)`
+  - 统计频率：`O(n)`
+  - 填充桶：`O(m)`
+  - 收集结果：`O(m)`，最多遍历所有不同元素
+  - 总共：`O(n)`
+
+- **空间复杂度**：`O(n)`
+  - 桶数组：`O(n)`
+  - 哈希表：`O(m)`
+
+#### 桶排序 vs 最小堆
+
+| | 最小堆 | 桶排序 |
+|---|---|---|
+| 时间复杂度 | O(n log k) | O(n) |
+| 空间复杂度 | O(n) | O(n) |
+| 实现难度 | 简单 | 中等 |
+| 适用场景 | 通用 | 频率范围小 |
+
+**选择建议**：
+- 一般情况：最小堆，代码简洁
+- 追求严格 O(n)：桶排序
+- 面试中：两种都要会，优先展示最小堆
+
+### 解法三：快速选择（进阶）
+
+类似 LeetCode 215，可以用快速选择找到频率第 K 大的分界线。
+
+实现复杂，实际很少用，不展开。
+
+### 常见错误
+
+**错误 1：比较器方向错误**
+
+```cpp
+// ❌ 错误：这是最大堆
+auto cmp = [](const pair<int, int>& a, const pair<int, int>& b) {
+    return a.second < b.second;
+};
+```
+
+应该用 `>` 构建最小堆。
+
+**错误 2：pair 顺序和比较器不匹配**
+
+```cpp
+// pair 是 {元素, 频率}
+minHeap.push({entry.first, entry.second});
+
+// ❌ 错误：比较器却比较 first（元素值）
+auto cmp = [](const pair<int, int>& a, const pair<int, int>& b) {
+    return a.first > b.first;
+};
+```
+
+应该比较 `a.second`（频率）。
+
+**错误 3：堆大小判断**
+
+```cpp
+// ❌ 错误
+if (minHeap.size() == k) {
+    minHeap.pop();
+}
+```
+
+应该是 `> k`，否则堆大小会变成 `k - 1`。
+
+**错误 4：忘记转换 size_t**
+
+```cpp
+if (minHeap.size() > k)  // 可能有警告
+```
+
+虽然能工作，但 `size()` 返回 `size_t`（无符号），与 `int` 比较可能有警告。严格写法：
+
+```cpp
+if (static_cast<int>(minHeap.size()) > k)
+```
+
+或者把 `k` 声明为 `size_t`。
+
+### decltype 关键字
+
+```cpp
+priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(cmp)> minHeap(cmp);
+```
+
+**作用**：获取 lambda 表达式的类型。
+
+- Lambda 表达式是匿名函数对象，每个 lambda 都有唯一类型
+- `decltype(cmp)` 获取 `cmp` 的类型，传给优先队列
+- 必须在构造时传入 `cmp` 实例：`minHeap(cmp)`
+
+**C++20 可以简化**：
+
+```cpp
+auto cmp = [](const auto& a, const auto& b) {
+    return a.second > b.second;
+};
+```
+
+### 相关题目
+
+- **LeetCode 215**：数组中的第 K 个最大元素 - 同样用最小堆维护前 K 大
+- **LeetCode 692**：前 K 个高频单词 - 需要额外按字典序排序
+- **LeetCode 973**：最接近原点的 K 个点 - 最大堆或快速选择
+- **LeetCode 703**：数据流中的第 K 大元素 - 维护最小堆
+
+### 代码
+
+- `leecode347.cpp`
 </content>
